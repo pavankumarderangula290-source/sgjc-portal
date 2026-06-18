@@ -16,7 +16,8 @@
                 <i class="fas fa-chalkboard-teacher"></i> SGJC
             </div>
             <nav class="sidebar-nav">
-                <a href="#" class="active"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="#" class="active" id="nav-dashboard" onclick="switchSection('dashboard')"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="#" id="nav-attendance" onclick="switchSection('attendance')"><i class="fas fa-calendar-check"></i> Attendance</a>
                 <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </nav>
         </aside>
@@ -28,7 +29,7 @@
                 <p>Manage your classes, students, and academic records</p>
             </div>
 
-            <div class="grid-layout grid-sidebar-layout">
+            <div class="grid-layout grid-sidebar-layout" id="dashboard-section">
                 <!-- Main Area -->
                 <div>
                     <!-- Today's Timetable -->
@@ -64,6 +65,7 @@
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Class</th>
+                                        <th>Branch</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -74,38 +76,7 @@
                         </div>
                     </div>
                     
-                    <div class="card" style="margin-top: 20px;">
-                        <div class="card-title">Bulk Class Attendance</div>
-                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                            <select id="bulk-class-select" class="form-control" style="flex: 1;">
-                                <option value="">-- Select Class Year --</option>
-                                <option value="1st Year">1st Year</option>
-                                <option value="2nd Year">2nd Year</option>
-                            </select>
-                            <input type="date" id="bulk-date" class="form-control" style="flex: 1;">
-                            <select id="bulk-session" class="form-control" style="flex: 1;">
-                                <option value="Morning">Morning</option>
-                                <option value="Afternoon">Afternoon</option>
-                            </select>
-                            <button class="btn btn-primary" onclick="loadBulkAttendance()">Load Students</button>
-                        </div>
-                        <div id="bulk-attendance-container" style="display: none;">
-                            <table style="margin-bottom: 20px;">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bulk-attendance-body">
-                                </tbody>
-                            </table>
-                            <div style="text-align: right;">
-                                <button class="btn btn-primary" onclick="submitBulkAttendance()">Submit Attendance</button>
-                            </div>
-                        </div>
-                    </div>
+
                     <div class="card" style="margin-top: 20px;">
                         <div class="card-title">Bulk Marks Entry</div>
                         <div class="grid-layout grid-2" style="margin-bottom: 20px;">
@@ -171,6 +142,48 @@
                     </div>
                 </div>
             </div>
+            
+            <div id="attendance-section" style="display: none;">
+                <div class="card">
+                    <div class="card-title">Daily Class Attendance</div>
+                    <div class="grid-layout grid-3" style="margin-bottom: 20px;">
+                        <select id="bulk-class-select" class="form-control">
+                            <option value="">-- Select Year --</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                        </select>
+                        <select id="bulk-branch-select" class="form-control">
+                            <option value="">-- Select Branch --</option>
+                            <option value="MPC">MPC</option>
+                            <option value="BIPC">BIPC</option>
+                            <option value="CEC">CEC</option>
+                        </select>
+                        <input type="text" id="bulk-section-select" class="form-control" placeholder="Section (e.g. A)">
+                    </div>
+                    <div class="grid-layout grid-3" style="margin-bottom: 20px;">
+                        <input type="date" id="bulk-date" class="form-control">
+                        <div></div>
+                        <button class="btn btn-primary" onclick="loadBulkAttendance()" style="height: 100%;">Load Students</button>
+                    </div>
+                    
+                    <div id="bulk-attendance-container" style="display: none;">
+                        <table style="margin-bottom: 20px;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-attendance-body">
+                            </tbody>
+                        </table>
+                        <div style="text-align: right;">
+                            <button class="btn btn-primary" onclick="submitBulkAttendance()">Submit Attendance</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -193,6 +206,15 @@
                         <option value="">-- Select Year --</option>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Branch</label>
+                    <select id="student-branch" class="form-control" required>
+                        <option value="">-- Select Branch --</option>
+                        <option value="MPC">MPC</option>
+                        <option value="BIPC">BIPC</option>
+                        <option value="CEC">CEC</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -367,6 +389,7 @@
                     <td><strong>${student.id}</strong></td>
                     <td>${student.name}</td>
                     <td>${student.class}</td>
+                    <td>${student.branch || '-'}</td>
                     <td>
                         <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; margin-right: 5px;" onclick="openMarksModal('${student.id}')">Marks</button>
                         <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; margin-right: 5px;" onclick="openAttendanceModal('${student.id}')">Attendance</button>
@@ -388,6 +411,7 @@
 
             const name = document.getElementById('student-name').value;
             const cls = document.getElementById('student-class').value;
+            const branch = document.getElementById('student-branch').value;
             const section = document.getElementById('student-section').value;
             const passcode = document.getElementById('student-initial-passcode').value;
             const imageFile = document.getElementById('student-image').files[0];
@@ -397,6 +421,7 @@
                 data = new FormData();
                 data.append('name', name);
                 data.append('class', cls);
+                data.append('branch', branch);
                 data.append('section', section);
                 data.append('passcode', passcode);
                 data.append('image', imageFile);
@@ -405,6 +430,7 @@
                 data = {
                     name,
                     class: cls,
+                    branch,
                     section,
                     passcode,
                     staffId: session.id
@@ -499,28 +525,36 @@
         let bulkStudents = [];
         async function loadBulkAttendance() {
             const cls = document.getElementById('bulk-class-select').value;
+            const branch = document.getElementById('bulk-branch-select').value;
+            const section = document.getElementById('bulk-section-select').value;
             const dt = document.getElementById('bulk-date').value;
-            const sess = document.getElementById('bulk-session').value;
-            if (!cls || !dt) {
-                alert("Please select a class and date.");
+            
+            if (!cls || !branch || !section || !dt) {
+                alert("Please fill out Year, Branch, Section, and Date.");
                 return;
             }
-            // Filter assigned students by class year
-            bulkStudents = studentsList.filter(s => s.class === cls);
+            // Filter assigned students
+            bulkStudents = studentsList.filter(s => s.class === cls && s.branch === branch && s.section.toLowerCase() === section.toLowerCase());
             const tbody = document.getElementById('bulk-attendance-body');
             tbody.innerHTML = '';
+            
+            const isSunday = new Date(dt).getDay() === 0;
+
             if (bulkStudents.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No students found for this class.</td></tr>';
             } else {
                 bulkStudents.forEach(s => {
+                    const statusOptions = isSunday 
+                        ? `<option value="holiday" selected>Holiday</option>`
+                        : `<option value="present">Present</option><option value="absent">Absent</option>`;
+                        
                     tbody.innerHTML += `
                         <tr>
                             <td>${s.id}</td>
                             <td>${s.name}</td>
                             <td>
-                                <select id="bulk-status-${s.id}" class="form-control" style="padding: 5px;">
-                                    <option value="present">Present</option>
-                                    <option value="absent">Absent</option>
+                                <select id="bulk-status-${s.id}" class="form-control" style="padding: 5px;" ${isSunday ? 'disabled' : ''}>
+                                    ${statusOptions}
                                 </select>
                             </td>
                         </tr>
@@ -532,7 +566,6 @@
 
         async function submitBulkAttendance() {
             const dt = document.getElementById('bulk-date').value;
-            const sess = document.getElementById('bulk-session').value;
             
             const records = bulkStudents.map(s => ({
                 studentId: s.id,
@@ -541,19 +574,39 @@
 
             const attData = {
                 date: dt,
-                session: sess,
+                session: 'Daily',
                 markedBy: session.id,
                 records: records
             };
 
-            const success = await staffApi.submitAttendance(attData);
-            if (success) {
+            const res = await fetch(`/api/attendance`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(attData)
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
                 alert("Bulk attendance submitted successfully!");
                 document.getElementById('bulk-attendance-container').style.display = 'none';
                 document.getElementById('bulk-date').value = '';
             } else {
-                alert("Failed to submit bulk attendance.");
+                alert("Failed to submit bulk attendance: " + (data.error || "It may be locked after one edit."));
             }
+        }
+        
+        function switchSection(section) {
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('attendance-section').style.display = 'none';
+            document.getElementById('nav-dashboard').classList.remove('active');
+            document.getElementById('nav-attendance').classList.remove('active');
+            
+            if (section === 'dashboard') {
+                document.getElementById('dashboard-section').style.display = 'grid';
+            } else {
+                document.getElementById(section + '-section').style.display = 'block';
+            }
+            document.getElementById('nav-' + section).classList.add('active');
         }
 
         let bulkMarksStudents = [];

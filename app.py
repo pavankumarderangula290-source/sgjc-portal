@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import sqlite3
 import os
@@ -73,6 +73,7 @@ _conn.executescript('''
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         class TEXT NOT NULL,
+        branch TEXT,
         section TEXT DEFAULT 'A',
         passcode TEXT DEFAULT '1234',
         isFirstLogin INTEGER DEFAULT 1,
@@ -95,7 +96,8 @@ _conn.executescript('''
         date TEXT NOT NULL,
         session TEXT NOT NULL,
         status TEXT NOT NULL,
-        markedBy TEXT NOT NULL
+        markedBy TEXT NOT NULL,
+        isEdited INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS announcements (
         id TEXT PRIMARY KEY,
@@ -121,6 +123,14 @@ _cursor = _conn.cursor()
 _cursor.execute("SELECT COUNT(*) FROM admin")
 if _cursor.fetchone()[0] == 0:
     _cursor.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ('admin', 'admin123'))
+try:
+    _conn.execute("ALTER TABLE students ADD COLUMN branch TEXT")
+except sqlite3.OperationalError:
+    pass
+try:
+    _conn.execute("ALTER TABLE attendance ADD COLUMN isEdited INTEGER DEFAULT 0")
+except sqlite3.OperationalError:
+    pass
 _conn.commit()
 _conn.close()
 
@@ -183,7 +193,7 @@ def update_admin_credentials():
     username = data.get('username')
     password = data.get('password')
     conn = get_db_connection()
-    conn.execute('UPDATE admin SET password = ? WHERE username = ?', (password, username))
+    conn.execute('UPDATE admin SET username = ?, password = ?', (username, password))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -191,7 +201,7 @@ def update_admin_credentials():
 @app.route('/api/admin/backup', methods=['GET'])
 def download_backup():
     if os.path.exists(DB_FILE):
-        return send_from_directory('.', DB_FILE, as_attachment=True, download_name='backup_database.sqlite')
+        return send_file(DB_FILE, as_attachment=True, download_name='backup_database.sqlite')
     return "Database not found", 404
 
 @app.route('/api/admin/restore', methods=['POST'])
@@ -379,6 +389,7 @@ def add_student():
 
     name = data.get('name')
     student_class = data.get('class')
+    branch = data.get('branch', '')
     section = data.get('section', 'A')
     passcode = data.get('passcode', '1234')
     staff_id_val = data.get('staffId')
@@ -393,8 +404,8 @@ def add_student():
             imagePath = unique_filename
 
     conn = get_db_connection()
-    conn.execute('INSERT INTO students (id, name, class, section, passcode, isFirstLogin, imagePath, staffId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                 (student_id, name, student_class, section, passcode, 1, imagePath, staff_id_val))
+    conn.execute('INSERT INTO students (id, name, class, branch, section, passcode, isFirstLogin, imagePath, staffId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 (student_id, name, student_class, branch, section, passcode, 1, imagePath, staff_id_val))
     conn.commit()
     conn.close()
     return jsonify({"success": True, "id": student_id})
@@ -481,7 +492,7 @@ def add_exams_bulk():
 def submit_attendance():
     data = request.json
     date = data.get('date')
-    session = data.get('session')
+    session = data.get('session', 'Daily')
     marked_by = data.get('markedBy')
     records = data.get('records', []) # [{'studentId': '...', 'status': 'present/absent'}]
     
@@ -502,13 +513,16 @@ def submit_attendance():
                 status = 'holiday'
             
             # Check if record already exists for this student, date and session
-            existing = conn.execute('SELECT id FROM attendance WHERE studentId = ? AND date = ? AND session = ?', 
+            existing = conn.execute('SELECT id, isEdited FROM attendance WHERE studentId = ? AND date = ? AND session = ?', 
                                    (student_id, date, session)).fetchone()
             if existing:
-                conn.execute('UPDATE attendance SET status = ?, markedBy = ? WHERE id = ?',
-                             (status, marked_by, existing['id']))
+                if existing['isEdited'] == 1:
+                    raise Exception(f"Attendance for student {student_id} is locked (already edited once).")
+                else:
+                    conn.execute('UPDATE attendance SET status = ?, markedBy = ?, isEdited = 1 WHERE id = ?',
+                                 (status, marked_by, existing['id']))
             else:
-                conn.execute('INSERT INTO attendance (id, studentId, date, session, status, markedBy) VALUES (?, ?, ?, ?, ?, ?)',
+                conn.execute('INSERT INTO attendance (id, studentId, date, session, status, markedBy, isEdited) VALUES (?, ?, ?, ?, ?, ?, 0)',
                              (att_id, student_id, date, session, status, marked_by))
         conn.commit()
         return jsonify({"success": True})

@@ -17,6 +17,7 @@
             </div>
             <nav class="sidebar-nav">
                 <a href="#" onclick="switchTab('staff-management', this)"><i class="fas fa-users-cog"></i> Staff</a>
+                <a href="#" onclick="switchTab('student-management', this)"><i class="fas fa-user-graduate"></i> Students</a>
                 <a href="#" onclick="switchTab('fees-management', this)"><i class="fas fa-money-check-alt"></i> Fees</a>
                 <a href="#" onclick="switchTab('academic-management', this)"><i class="fas fa-book"></i> Academic</a>
                 <a href="#" onclick="switchTab('attendance-management', this)"><i class="fas fa-calendar-check"></i> Attendance</a>
@@ -72,6 +73,29 @@
                             </thead>
                             <tbody id="resets-table-body">
                                 <!-- Resets loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Student Management -->
+            <div id="student-management" class="tab-pane" style="display: none;">
+                <div class="card">
+                    <div class="card-title">Student Directory</div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Class</th>
+                                    <th>Branch</th>
+                                    <th>Staff ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-students-table-body">
+                                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading students...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -453,6 +477,26 @@
                     </tr>
                 `;
             });
+
+            // Load Students
+            const students = await fetch('/api/students').then(r => r.json());
+            const studentsTbody = document.getElementById('admin-students-table-body');
+            studentsTbody.innerHTML = '';
+            if (students.length === 0) {
+                studentsTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No students found.</td></tr>';
+            } else {
+                students.forEach(s => {
+                    studentsTbody.innerHTML += `
+                        <tr>
+                            <td><strong>${s.id}</strong></td>
+                            <td>${s.name}</td>
+                            <td>${s.class}</td>
+                            <td>${s.branch || '-'}</td>
+                            <td>${s.staffId || '-'}</td>
+                        </tr>
+                    `;
+                });
+            }
 
             // Load Password Resets
             const resets = await adminApi.getPasswordResets();
