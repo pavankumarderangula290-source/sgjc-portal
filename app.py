@@ -28,7 +28,7 @@ else:
 DATA_DIR = os.environ.get('DATA_DIR', '.')
 DB_FILE = os.path.join(DATA_DIR, 'database.sqlite')
 
-_conn = sqlite3.connect(DB_FILE)
+_conn = sqlite3.connect(DB_FILE, timeout=10.0)
 _conn.executescript('''
     CREATE TABLE IF NOT EXISTS password_resets (
         id TEXT PRIMARY KEY,
@@ -150,7 +150,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, timeout=10.0)
     conn.row_factory = sqlite3.Row
     return conn
 
