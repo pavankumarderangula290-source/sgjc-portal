@@ -13,7 +13,7 @@ CORS(app)
 
 # Initialize Razorpay Client with provided keys
 # TODO: Add your new Razorpay keys here when ready. For now, using working test keys for verification.
-razorpay_client = razorpay.Client(auth=("rzp_test_T2zFx401TbtQ0W", "WsZTgxHXdKbXZuFnRHXiQpLz"))
+razorpay_client = razorpay.Client(auth=("rzp_test_T3tqCQvY2zBd5p", "asVUne1ArCvPxbf4GYJe7xFO"))
 
 DATA_DIR = os.environ.get('DATA_DIR', '.')
 DB_FILE = os.path.join(DATA_DIR, 'database.sqlite')

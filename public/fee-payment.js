@@ -110,7 +110,7 @@ async function initiatePayment(feeId) {
 
         // Initialize Razorpay checkout
         const options = {
-            "key": "rzp_test_T2zFx401TbtQ0W", 
+            "key": "rzp_test_T3tqCQvY2zBd5p", 
             "amount": orderData.amount,
             "currency": orderData.currency,
             "name": "Saanvi International School",
