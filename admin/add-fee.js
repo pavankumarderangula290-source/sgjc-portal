@@ -23,7 +23,7 @@ async function searchStudent() {
                 onmouseover="this.style.backgroundColor='#f1f5f9'"
                 onmouseout="this.style.backgroundColor='transparent'">
                 <strong style="color:var(--portal-primary);">${s.name}</strong> 
-                <span style="color:#666;">(ID: ${s.id})</span> - Class ${s.class} ${s.section}
+                <span style="color:#666;">(ID: ${s.id})</span> - ${s.class ? `Class ${s.class} ${s.section || ''}` : `Branch ${s.branch || 'Unknown'}`}
             </li>`;
         });
         html += '</ul>';

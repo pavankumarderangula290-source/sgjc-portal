@@ -27,7 +27,7 @@ async function fetchAdminFees() {
             tr.innerHTML = `
             <td>${f.studentId}</td>
             <td>${f.studentName || 'Unknown'}</td>
-            <td>Class ${f.studentClass} ${f.studentSection}</td>
+            <td>${f.studentClass ? `Class ${f.studentClass} ${f.studentSection || ''}` : `Branch ${f.studentBranch || '-'}`}</td>
             <td>₹${f.amount}</td>
             <td>${new Date(f.dueDate).toLocaleDateString()}</td>
             <td>${statusBadge}</td>

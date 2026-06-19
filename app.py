@@ -8,12 +8,22 @@ import datetime
 import random
 import razorpay
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 app = Flask(__name__, static_folder='public', static_url_path='')
 CORS(app)
 
-# Initialize Razorpay Client with provided keys
-# TODO: Add your new Razorpay keys here when ready. For now, using working test keys for verification.
-razorpay_client = razorpay.Client(auth=("rzp_test_T3tqCQvY2zBd5p", "asVUne1ArCvPxbf4GYJe7xFO"))
+# Initialize Razorpay Client with provided keys from env
+razorpay_key_id = os.environ.get('RAZORPAY_KEY_ID')
+razorpay_key_secret = os.environ.get('RAZORPAY_KEY_SECRET')
+
+if razorpay_key_id and razorpay_key_secret:
+    razorpay_client = razorpay.Client(auth=(razorpay_key_id, razorpay_key_secret))
+else:
+    razorpay_client = None
+    print("WARNING: Razorpay credentials not found in environment.")
 
 DATA_DIR = os.environ.get('DATA_DIR', '.')
 DB_FILE = os.path.join(DATA_DIR, 'database.sqlite')
@@ -680,7 +690,7 @@ def delete_announcement(id):
 @app.route('/api/fees/<student_id>', methods=['GET'])
 def get_student_fees(student_id):
     conn = get_db_connection()
-    student = conn.execute('SELECT id, name, class, section FROM students WHERE id = ?', (student_id,)).fetchone()
+    student = conn.execute('SELECT id, name, class, section, branch FROM students WHERE id = ?', (student_id,)).fetchone()
     if not student:
         conn.close()
         return jsonify({"error": "Student not found"}), 404
@@ -706,6 +716,14 @@ def create_fee_order():
         
     amount = int(fee['amount'] * 100) # Razorpay expects amount in paise
     
+    if not razorpay_client:
+        conn.close()
+        return jsonify({"success": False, "error": "Razorpay credentials not configured"}), 401
+
+    if amount < 100:
+        conn.close()
+        return jsonify({"success": False, "error": "Amount must be at least 100 paise"}), 400
+    
     # Create Razorpay Order
     data = {
         "amount": amount,
@@ -716,9 +734,15 @@ def create_fee_order():
         order = razorpay_client.order.create(data=data)
         conn.close()
         return jsonify({"success": True, "order_id": order['id'], "amount": amount, "currency": "INR"})
-    except Exception as e:
+    except razorpay.errors.BadRequestError as e:
+        conn.close()
+        return jsonify({"success": False, "error": str(e)}), 400
+    except razorpay.errors.ServerError as e:
         conn.close()
         return jsonify({"success": False, "error": str(e)}), 500
+    except Exception as e:
+        conn.close()
+        return jsonify({"success": False, "error": "Internal server error"}), 500
 
 @app.route('/api/fees/verify-payment', methods=['POST'])
 def verify_fee_payment():
@@ -727,6 +751,12 @@ def verify_fee_payment():
     payment_id = data.get('razorpay_payment_id')
     order_id = data.get('razorpay_order_id')
     signature = data.get('razorpay_signature')
+    
+    if not fee_id or not payment_id or not order_id or not signature:
+        return jsonify({"success": False, "error": "Missing required parameters"}), 400
+        
+    if not razorpay_client:
+        return jsonify({"success": False, "error": "Razorpay credentials not configured"}), 401
     
     try:
         # Verify Signature
@@ -747,11 +777,18 @@ def verify_fee_payment():
     except Exception as e:
         return jsonify({"success": False, "error": "Payment verification failed"}), 400
 
+@app.route('/api/config/razorpay', methods=['GET'])
+def get_razorpay_config():
+    return jsonify({
+        "success": True,
+        "key_id": os.environ.get('RAZORPAY_KEY_ID')
+    })
+
 @app.route('/api/admin/fees', methods=['GET'])
 def get_all_fees():
     conn = get_db_connection()
     records = conn.execute('''
-        SELECT f.*, s.name as studentName, s.class as studentClass, s.section as studentSection
+        SELECT f.*, s.name as studentName, s.class as studentClass, s.section as studentSection, s.branch as studentBranch
         FROM fees f JOIN students s ON f.studentId = s.id ORDER BY f.dueDate DESC
     ''').fetchall()
     conn.close()
@@ -807,7 +844,7 @@ def update_fee(fee_id):
 def search_students():
     query = request.args.get('q', '')
     conn = get_db_connection()
-    records = conn.execute('SELECT id, name, class, section FROM students WHERE name LIKE ? OR id LIKE ? LIMIT 10',
+    records = conn.execute('SELECT id, name, class, section, branch FROM students WHERE name LIKE ? OR id LIKE ? LIMIT 10',
                            (f'%{query}%', f'%{query}%')).fetchall()
     conn.close()
     return jsonify([dict(r) for r in records])

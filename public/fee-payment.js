@@ -13,7 +13,13 @@ async function fetchFees() {
         const response = await fetch(`${API_BASE}/fees/${studentId}`);
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            alert(errData.error || 'Student not found or server error');
+            
+            // Show inline error instead of alert
+            document.getElementById('feeResultsContainer').style.display = 'block';
+            document.getElementById('feeList').innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--portal-danger); background: rgba(255,0,0,0.05); border-radius: 8px; border: 1px solid rgba(255,0,0,0.1);">
+                <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i><br>
+                <strong>Error:</strong> ${errData.error || 'Student not found or server error'}
+            </div>`;
             return;
         }
         const data = await response.json();
@@ -36,7 +42,7 @@ function renderFees(student, fees) {
             <h3 style="margin-bottom:0.25rem; color:var(--portal-primary);">${student.name}</h3>
             <div style="color:var(--portal-muted); font-size:0.875rem;">
                 Student ID: <strong>${student.id}</strong> &nbsp;|&nbsp; 
-                Class: <strong>${student.class} ${student.section}</strong>
+                ${student.class ? `Class: <strong>${student.class} ${student.section || ''}</strong>` : `Branch: <strong>${student.branch || 'Unknown'}</strong>`}
             </div>
         </div>
     `;
@@ -108,9 +114,18 @@ async function initiatePayment(feeId) {
             return;
         }
 
+        // Fetch Razorpay config
+        const configRes = await fetch(`${API_BASE}/config/razorpay`);
+        const configData = await configRes.json();
+        
+        if (!configData.success || !configData.key_id) {
+            alert('Failed to load payment gateway configuration.');
+            return;
+        }
+
         // Initialize Razorpay checkout
         const options = {
-            "key": "rzp_test_T3tqCQvY2zBd5p", 
+            "key": configData.key_id, 
             "amount": orderData.amount,
             "currency": orderData.currency,
             "name": "Saanvi International School",
@@ -152,9 +167,17 @@ async function initiatePayment(feeId) {
             },
             "theme": {
                 "color": "#0f172a"
+            },
+            "modal": {
+                "ondismiss": function() {
+                    console.log('Payment modal dismissed');
+                }
             }
         };
         const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response){
+            alert('Payment failed: ' + response.error.description);
+        });
         rzp.open();
     } catch (error) {
         console.error('Payment error:', error);
