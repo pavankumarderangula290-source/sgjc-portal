@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initThreeJS();
     initGSAP();
-    initForm();
 });
 
 /* ==========================================
@@ -161,58 +160,3 @@ function initGSAP() {
     });
 }
 
-/* ==========================================
-   Contact Form Handling
-   ========================================== */
-function initForm() {
-    const form = document.getElementById('contact-form');
-    const responseDiv = document.getElementById('form-response');
-
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerText;
-        submitBtn.innerText = 'Submitting...';
-        submitBtn.disabled = true;
-
-        const data = {
-            name: document.getElementById('name').value,
-            phone: document.getElementById('phone').value,
-            course: document.getElementById('course').value,
-            message: document.getElementById('message').value
-        };
-
-        try {
-            const response = await fetch('/api/contact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                responseDiv.innerHTML = `<p class="success-msg"><i class="fas fa-check-circle"></i> ${result.message}</p>`;
-                form.reset();
-            } else {
-                throw new Error('Server returned false success status');
-            }
-        } catch (error) {
-            console.error('Submission error:', error);
-            responseDiv.innerHTML = `<p class="error-msg"><i class="fas fa-exclamation-circle"></i> Failed to submit. Please try again later.</p>`;
-        } finally {
-            submitBtn.innerText = originalText;
-            submitBtn.disabled = false;
-            
-            // Clear message after 5 seconds
-            setTimeout(() => {
-                responseDiv.innerHTML = '';
-            }, 5000);
-        }
-    });
-}
