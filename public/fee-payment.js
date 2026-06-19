@@ -156,7 +156,7 @@ async function initiatePayment(feeId) {
             "key": configData.key_id, 
             "amount": orderData.amount,
             "currency": orderData.currency,
-            "name": "Saanvi International School",
+            "name": "Sri Gayathri Junior College",
             "description": "Fee Payment",
             "image": "images/logo.jpg",
             "order_id": orderData.order_id,
