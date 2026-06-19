@@ -158,7 +158,6 @@ async function initiatePayment(feeId) {
             "currency": orderData.currency,
             "name": "Sri Gayathri Junior College",
             "description": "Fee Payment",
-            "image": "images/logo.jpg",
             "order_id": orderData.order_id,
             "handler": async function (response) {
                 // Verify payment on backend
