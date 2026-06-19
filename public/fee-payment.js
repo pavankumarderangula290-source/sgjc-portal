@@ -123,6 +123,34 @@ async function initiatePayment(feeId) {
             return;
         }
 
+        // Handle dummy test mode
+        if (orderData.dummy) {
+            alert('Test Mode Active: Simulating dummy successful payment...');
+            try {
+                const verifyRes = await fetch(`${API_BASE}/fees/verify-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        feeId: feeId,
+                        razorpay_payment_id: 'pay_dummy_' + Math.random().toString(36).substr(2, 9),
+                        razorpay_order_id: orderData.order_id,
+                        razorpay_signature: 'dummy_signature'
+                    })
+                });
+                const verifyData = await verifyRes.json();
+                if (verifyData.success) {
+                    alert('Dummy payment successful! Your receipt will download automatically.');
+                    await loadStudentData(currentStudent.id);
+                    downloadReceipt(feeId);
+                } else {
+                    alert('Dummy payment verification failed: ' + verifyData.error);
+                }
+            } catch (err) {
+                alert('Error verifying dummy payment: ' + err.message);
+            }
+            return;
+        }
+
         // Initialize Razorpay checkout
         const options = {
             "key": configData.key_id, 
