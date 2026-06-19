@@ -19,6 +19,7 @@
                 <a href="#" class="active" id="nav-performance" onclick="switchSection('performance')"><i class="fas fa-chart-line"></i> Performance</a>
                 <a href="#" id="nav-weekend" onclick="switchSection('weekend')"><i class="fas fa-star"></i> Weekend Exams</a>
                 <a href="#" id="nav-mid" onclick="switchSection('mid')"><i class="fas fa-file-alt"></i> Mid Exams</a>
+                <a href="#" id="nav-fees" onclick="switchSection('fees')"><i class="fas fa-rupee-sign"></i> Fee Details</a>
                 <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </nav>
         </aside>
@@ -68,6 +69,15 @@
                             <div class="card-title">Mid Exam Results</div>
                             <div id="mid-exams-container">
                                 <!-- Mid results injected here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fees-section" style="display: none;">
+                        <div class="card">
+                            <div class="card-title">Fee Details</div>
+                            <div id="fees-container">
+                                <!-- Fees injected here -->
                             </div>
                         </div>
                     </div>
@@ -156,6 +166,38 @@
             
             const midExams = (currentStudent.exams || []).filter(e => e.examName.toLowerCase().includes('mid'));
             renderExams('mid-exams-container', midExams);
+            
+            // Fees
+            const feesResponse = await studentApi.getFees(session.id);
+            renderStudentFees('fees-container', feesResponse.fees || []);
+        }
+
+        function renderStudentFees(containerId, feesArray) {
+            const container = document.getElementById(containerId);
+            if (feesArray && feesArray.length > 0) {
+                let html = '<div style="overflow-x: auto;"><table><thead><tr><th>Fee ID</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                feesArray.forEach(fee => {
+                    const statusColor = fee.status === 'complete' ? '#059669' : (fee.status === 'pending' ? '#D97706' : '#DC2626');
+                    let actionBtn = fee.status === 'pending' ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="payFee('${fee.id}')">Pay Now</button>` : `<span style="color:var(--text-muted); font-size: 0.85rem;">Paid</span>`;
+                    html += `
+                        <tr>
+                            <td><strong>${fee.id}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">${fee.remarks || ''}</span></td>
+                            <td style="font-weight:bold; color:var(--primary);">₹${fee.amount}</td>
+                            <td>${fee.dueDate}</td>
+                            <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${fee.status}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="color: var(--text-muted);">No fees assigned.</p>';
+            }
+        }
+        
+        function payFee(feeId) {
+            alert("Payment gateway integration is pending. Please contact administration.");
         }
 
         function renderExams(containerId, examsArray) {
@@ -201,10 +243,12 @@
             document.getElementById('performance-section').style.display = 'none';
             document.getElementById('weekend-section').style.display = 'none';
             document.getElementById('mid-section').style.display = 'none';
+            document.getElementById('fees-section').style.display = 'none';
             
             document.getElementById('nav-performance').classList.remove('active');
             document.getElementById('nav-weekend').classList.remove('active');
             document.getElementById('nav-mid').classList.remove('active');
+            document.getElementById('nav-fees').classList.remove('active');
             
             document.getElementById(sectionName + '-section').style.display = 'block';
             document.getElementById('nav-' + sectionName).classList.add('active');

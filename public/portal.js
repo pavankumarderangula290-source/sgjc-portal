@@ -308,6 +308,10 @@ const studentApi = {
     async getAttendance(id) {
         const res = await fetch(`/api/attendance/student/${id}`);
         return await res.json();
+    },
+    async getFees(id) {
+        const res = await fetch(`/api/fees/${id}`);
+        return await res.json();
     }
 };
 
